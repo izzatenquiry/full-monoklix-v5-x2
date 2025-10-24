@@ -3,7 +3,7 @@ import { type HistoryItem, type User, type ErrorWebhookPayload } from '../types'
 
 // Webhook URL for error notifications.
 // PASTE YOUR ERROR WEBHOOK URL HERE. Leave it empty to disable.
-const ERROR_WEBHOOK_URL = 'https://n8n.1za7.com/webhook-test/trigger-error-log';
+const ERROR_WEBHOOK_URL = 'https://n8n.1za7.com/webhook/trigger-error-log';
 
 const blobToBase64 = (blob: Blob): Promise<string> => {
     return new Promise((resolve, reject) => {

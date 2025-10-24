@@ -7,7 +7,7 @@ import { TRIAL_USAGE_LIMIT } from '../services/aiConfig';
 
 
 const getNavItems = (): NavItem[] => [
-  { id: 'home', label: "e-Tutorial", description: "Learn Content Strategy", section: 'main', icon: BookOpenIcon, isSpecial: true },
+  { id: 'home', label: "Home", description: "Learn Content Strategy", section: 'main', icon: BookOpenIcon, isSpecial: true },
   { id: 'get-started', label: "Get Started Guide", section: 'main', icon: GraduationCapIcon },
   { id: 'ai-text-suite', label: "AI Content Idea", section: 'free', icon: FileTextIcon, hideForStatus: ['trial'] },
   { id: 'ai-image-suite', label: "AI Image Suite", section: 'free', icon: ImageIcon, hideForStatus: ['trial'] },
