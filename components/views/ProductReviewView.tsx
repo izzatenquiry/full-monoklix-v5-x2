@@ -831,13 +831,16 @@ const ProductReviewView: React.FC<ProductReviewViewProps> = ({ onReEdit, onCreat
             {Array.from({ length: 4 }).map((_, i) => (
                 <div key={`image-scene-${i}`} className="bg-neutral-100 dark:bg-neutral-800/50 p-3 rounded-lg flex flex-col gap-3">
                     <p className="font-bold text-sm">Scene {i+1}</p>
-                    <button onClick={() => {
+                    <div
+                        onClick={() => {
                             if (generatedImages[i] && typeof generatedImages[i] === 'string') {
                                 setPreviewingSceneIndex(i);
                             }
                         }}
-                        className="aspect-square bg-neutral-200 dark:bg-neutral-700/50 rounded-md flex items-center justify-center relative group cursor-pointer w-full h-full p-0 border-0"
-                        disabled={!(generatedImages[i] && typeof generatedImages[i] === 'string')}
+                        className={`bg-neutral-200 dark:bg-neutral-700/50 rounded-md flex items-center justify-center relative group w-full p-0 border-0 ${generatedImages[i] && typeof generatedImages[i] === 'string' ? 'cursor-pointer' : ''}`}
+                        style={{ aspectRatio: videoAspectRatio.replace(':', ' / ') }}
+                        role="button"
+                        tabIndex={generatedImages[i] && typeof generatedImages[i] === 'string' ? 0 : -1}
                         aria-label={`Preview scene ${i + 1}`}
                     >
                         {step2Disabled ? (
@@ -859,7 +862,7 @@ const ProductReviewView: React.FC<ProductReviewViewProps> = ({ onReEdit, onCreat
                                 </div>
                             </>
                         ) : null}
-                    </button>
+                    </div>
                     <button onClick={() => handleRetryScene(i)} disabled={imageLoadingStatus[i] || !parsedScenes[i]} className="w-full text-sm bg-white dark:bg-neutral-700 font-semibold py-2 px-3 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                         {imageLoadingStatus[i] ? <Spinner/> : <><ImageIcon className="w-4 h-4"/> Generate Image</>}
                     </button>
