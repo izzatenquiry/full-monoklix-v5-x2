@@ -1,6 +1,7 @@
 import { type TutorialContent, type PlatformStatus, type Announcement, type ViralPrompt } from '../types';
 import { saveData, loadData } from './indexedDBService';
 import { supabase } from './supabaseClient';
+import { MODELS } from './aiConfig';
 
 const TUTORIAL_CONTENT_KEY = 'monoklix-ai-tutorial-content';
 const PLATFORM_STATUS_KEY = 'monoklix-ai-platform-status';
@@ -71,6 +72,45 @@ export const getAnnouncements = async (): Promise<Announcement[]> => {
 
 export const saveAnnouncements = async (announcements: Announcement[]) => {
     await saveData(ANNOUNCEMENTS_KEY, announcements);
+};
+
+export const getGenerationStats = async (): Promise<{ imageCount: number; videoCount: number }> => {
+    try {
+        // Count successful image generations from both image generation and image editing models
+        const { count: imageCount, error: imageError } = await supabase
+            .from('activity_log')
+            .select('id', { count: 'exact', head: true })
+            .eq('activity_type', 'ai_generation')
+            .eq('status', 'Success')
+            .in('model', [MODELS.imageGeneration, MODELS.imageEdit]);
+
+        if (imageError) {
+            console.error("Error fetching image generation stats:", imageError);
+            throw imageError;
+        }
+
+        // Count successful video generations by looking for 'veo' in the model name
+        const { count: videoCount, error: videoError } = await supabase
+            .from('activity_log')
+            .select('id', { count: 'exact', head: true })
+            .eq('activity_type', 'ai_generation')
+            .eq('status', 'Success')
+            .like('model', '%veo%');
+
+        if (videoError) {
+            console.error("Error fetching video generation stats:", videoError);
+            throw videoError;
+        }
+
+        return {
+            imageCount: imageCount ?? 0,
+            videoCount: videoCount ?? 0,
+        };
+    } catch (error) {
+        console.error("Error fetching overall generation stats:", error);
+        // Return 0 on error to prevent UI crashing
+        return { imageCount: 0, videoCount: 0 };
+    }
 };
 
 

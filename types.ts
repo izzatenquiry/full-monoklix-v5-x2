@@ -95,6 +95,8 @@ export interface User {
   subscriptionExpiry?: number; // Kept for legacy trial users, but new registrations won't use it.
   webhookUrl?: string | null;
   storyboardUsageCount?: number;
+  totalImage?: number;
+  totalVideo?: number;
 }
 
 export type LoginResult = { success: true; user: User } | { success: false; message: string };

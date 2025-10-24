@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getContent, getPlatformStatus, getAnnouncements } from '../../services/contentService';
-import { type TutorialContent, type PlatformStatus, type Announcement, type PlatformSystemStatus } from '../../types';
-import { ChevronDownIcon, CheckCircleIcon, XIcon, AlertTriangleIcon, MegaphoneIcon } from '../Icons';
+import { type TutorialContent, type PlatformStatus, type Announcement, type PlatformSystemStatus, type User } from '../../types';
+import { ChevronDownIcon, CheckCircleIcon, XIcon, AlertTriangleIcon, MegaphoneIcon, ImageIcon, VideoIcon } from '../Icons';
 
 interface PlatformUpdatesViewProps {
 }
@@ -92,18 +92,19 @@ const PlatformUpdatesView: React.FC<PlatformUpdatesViewProps> = () => {
 };
 
 interface ECourseViewProps {
+    currentUser: User;
 }
 
-const ECourseView: React.FC<ECourseViewProps> = () => {
+const ECourseView: React.FC<ECourseViewProps> = ({ currentUser }) => {
   const [content, setContent] = useState<TutorialContent | null>(null);
   const [isTutorialsVisible, setIsTutorialsVisible] = useState(false);
 
   useEffect(() => {
-    const fetchContent = async () => {
-        const content = await getContent();
-        setContent(content);
+    const fetchPageData = async () => {
+        const contentData = await getContent();
+        setContent(contentData);
     };
-    fetchContent();
+    fetchPageData();
   }, []);
 
   if (!content) {
@@ -111,7 +112,28 @@ const ECourseView: React.FC<ECourseViewProps> = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-12">
+    <div className="max-w-7xl mx-auto space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg shadow-sm flex items-center gap-6">
+            <div className="p-4 bg-blue-100 dark:bg-blue-900/50 rounded-full">
+                <ImageIcon className="w-8 h-8 text-blue-600 dark:text-blue-400"/>
+            </div>
+            <div>
+                <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Your Generated Images</p>
+                <p className="text-3xl font-bold text-neutral-800 dark:text-white">{(currentUser.totalImage ?? 0).toLocaleString()}</p>
+            </div>
+        </div>
+        <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg shadow-sm flex items-center gap-6">
+            <div className="p-4 bg-purple-100 dark:bg-purple-900/50 rounded-full">
+                <VideoIcon className="w-8 h-8 text-purple-600 dark:text-purple-400"/>
+            </div>
+            <div>
+                <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Your Generated Videos</p>
+                <p className="text-3xl font-bold text-neutral-800 dark:text-white">{(currentUser.totalVideo ?? 0).toLocaleString()}</p>
+            </div>
+        </div>
+      </div>
+      
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg shadow-sm">
             <h2 className="text-xl font-bold mb-4">Getting Started</h2>

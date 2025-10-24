@@ -111,6 +111,8 @@ const mapProfileToUser = (
     avatarUrl: profile.avatar_url || undefined,
     subscriptionExpiry: profile.subscription_expiry ? new Date(profile.subscription_expiry).getTime() : undefined,
     webhookUrl: profile.webhook_url || undefined,
+    totalImage: profile.total_image ?? undefined,
+    totalVideo: profile.total_video ?? undefined,
   };
 };
 
@@ -254,6 +256,8 @@ export const replaceUsers = async (importedUsers: User[]): Promise<{ success: bo
             avatar_url: user.avatarUrl || null,
             subscription_expiry: user.subscriptionExpiry ? new Date(user.subscriptionExpiry).toISOString() : null,
             webhook_url: user.webhookUrl || null,
+            total_image: user.totalImage || 0,
+            total_video: user.totalVideo || 0,
         }));
         
         const { error: deleteError } = await supabase.from('users').delete().neq('role', 'admin');
@@ -362,8 +366,8 @@ export const getAvailableApiKeys = async (): Promise<AvailableApiKey[]> => {
     
     return data.map(item => ({
         id: item.id,
-        apiKey: item.api_key,
-        createdAt: item.created_at,
+        apiKey: item.apiKey,
+        createdAt: item.createdAt,
     }));
 };
 
@@ -593,5 +597,59 @@ export const incrementStoryboardUsage = async (userId: string): Promise<{ succes
         const message = getErrorMessage(error);
         console.error("Failed to increment storyboard usage:", message);
         return { success: false, message };
+    }
+};
+
+export const incrementImageUsage = async (userId: string): Promise<void> => {
+    // This is a fire-and-forget function. Errors are logged but not thrown.
+    if (userId.startsWith('trial-')) return; // Do not track for trial users in this table.
+
+    try {
+        const { data: currentData, error: fetchError } = await supabase
+            .from('users')
+            .select('total_image')
+            .eq('id', userId)
+            .single();
+
+        if (fetchError) throw fetchError;
+        
+        const currentCount = currentData?.total_image || 0;
+
+        const { error: updateError } = await supabase
+            .from('users')
+            .update({ total_image: currentCount + 1 })
+            .eq('id', userId);
+
+        if (updateError) throw updateError;
+
+    } catch (error) {
+        console.error("Failed to increment image usage:", getErrorMessage(error));
+    }
+};
+
+export const incrementVideoUsage = async (userId: string): Promise<void> => {
+    // This is a fire-and-forget function. Errors are logged but not thrown.
+    if (userId.startsWith('trial-')) return; // Do not track for trial users in this table.
+    
+    try {
+        const { data: currentData, error: fetchError } = await supabase
+            .from('users')
+            .select('total_video')
+            .eq('id', userId)
+            .single();
+
+        if (fetchError) throw fetchError;
+        
+        const currentCount = currentData?.total_video || 0;
+
+        const { error: updateError } = await supabase
+            .from('users')
+            .update({ total_video: currentCount + 1 })
+            .eq('id', userId);
+
+        if (updateError) throw updateError;
+
+    } catch (error) {
+        console.error("Failed to increment video usage:", getErrorMessage(error));
     }
 };

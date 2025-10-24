@@ -6,6 +6,9 @@ import { handleApiError } from "./errorHandler";
 import { generateVideoWithVeo3, checkVideoStatus, uploadImageForVeo3 } from './veo3Service';
 import { cropImageToAspectRatio } from "./imageService";
 import { decodeBase64, createWavBlob } from '../utils/audioUtils';
+import { incrementImageUsage, incrementVideoUsage } from './userService';
+// FIX: Import addHistoryItem from historyService to resolve the 'Cannot find name' error.
+import { addHistoryItem } from "./historyService";
 
 
 const getActiveApiKey = (): string | null => {
@@ -34,6 +37,21 @@ const getProxyBaseUrl = (): string => {
     // Local development proxy server
     return 'http://localhost:3001';
   }
+};
+
+const getCurrentUserId = (): string | null => {
+    try {
+        const savedUserJson = localStorage.getItem('currentUser');
+        if (savedUserJson) {
+            const user = JSON.parse(savedUserJson);
+            if (user && user.id) {
+                return user.id;
+            }
+        }
+    } catch (error) {
+        console.error("Failed to parse user from localStorage for usage tracking.", error);
+    }
+    return null;
 };
 
 export interface MultimodalContent {
@@ -128,6 +146,11 @@ export const generateImages = async (
             status: 'Success',
             mediaOutput: response.generatedImages.length > 0 ? response.generatedImages[0].image.imageBytes : undefined
         });
+
+        const userId = getCurrentUserId();
+        if (userId) {
+            incrementImageUsage(userId);
+        }
 
         const images = response.generatedImages.map(img => img.image.imageBytes);
         images.forEach(imgBase64 => {
@@ -269,6 +292,18 @@ export const generateVideo = async (
             })
             .then(blob => new File([blob], `monoklix-veo3-${Date.now()}.mp4`, { type: 'video/mp4' }));
 
+        videoBlobPromise.then(file => {
+            addLogEntry({ model, prompt: prompt, output: '1 video generated successfully (streamed).', tokenCount: 0, status: 'Success', mediaOutput: file });
+            triggerUserWebhook({ type: 'video', prompt: prompt, result: file });
+            addHistoryItem({ type: 'Video', prompt: `Video: ${prompt}`, result: file });
+            const userId = getCurrentUserId();
+            if (userId) {
+                incrementVideoUsage(userId);
+            }
+        }).catch(err => {
+            console.error("Error saving streamed video to history:", err);
+        });
+
         return { videoUrl: proxyDownloadUrl, thumbnailUrl, videoBlobPromise };
 
     } catch (error) {
@@ -377,6 +412,10 @@ export const composeImage = async (prompt: string, images: MultimodalContent[]):
 
         if (result.imageBase64) {
             triggerUserWebhook({ type: 'image', prompt: webhookPrompt, result: result.imageBase64, mimeType: 'image/png' });
+            const userId = getCurrentUserId();
+            if (userId) {
+                incrementImageUsage(userId);
+            }
         }
         if (result.text) {
              triggerUserWebhook({ type: 'text', prompt: webhookPrompt, result: result.text });

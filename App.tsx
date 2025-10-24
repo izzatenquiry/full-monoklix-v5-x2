@@ -366,7 +366,7 @@ const App: React.FC = () => {
   const renderView = () => {
     switch (activeView) {
       case 'home':
-        return <ECourseView />;
+        return <ECourseView currentUser={currentUser!} />;
       case 'get-started':
         return <GetStartedView />;
       case 'ai-text-suite':
@@ -413,7 +413,7 @@ const App: React.FC = () => {
                     language={language}
                  />;
       default:
-        return <ECourseView />;
+        return <ECourseView currentUser={currentUser!} />;
     }
   };
   
