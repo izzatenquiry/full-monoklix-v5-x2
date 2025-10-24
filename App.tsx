@@ -124,6 +124,11 @@ const App: React.FC = () => {
   const [aiSupportMessages, setAiSupportMessages] = useState<Message[]>([]);
   const [aiSupportChat, setAiSupportChat] = useState<Chat | null>(null);
   const [isAiSupportLoading, setIsAiSupportLoading] = useState(false);
+  
+  const handleUserUpdate = useCallback((updatedUser: User) => {
+    setCurrentUser(updatedUser);
+    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+  }, []);
 
   useEffect(() => {
     const fetchAndSetToken = async () => {
@@ -199,16 +204,24 @@ const App: React.FC = () => {
         setErrorModalContent(content);
     };
 
+    // FIX: Add event listener for real-time user usage updates.
+    const handleUserUsageUpdate = (updatedUser: User) => {
+      console.log('App: User usage stats updated via event bus. Refreshing state.');
+      handleUserUpdate(updatedUser);
+    };
+
     eventBus.on('tempKeyClaimed', handleNewKeyClaimed);
     eventBus.on('initiateAutoApiKeyClaim', handleAutoClaim);
     eventBus.on('showErrorModal', showErrorModal);
+    eventBus.on('userUsageUpdated', handleUserUsageUpdate);
 
     return () => {
       eventBus.remove('tempKeyClaimed', handleNewKeyClaimed);
       eventBus.remove('initiateAutoApiKeyClaim', handleAutoClaim);
       eventBus.remove('showErrorModal', showErrorModal);
+      eventBus.remove('userUsageUpdated', handleUserUsageUpdate);
     };
-  }, [currentUser, autoClaimStatus]);
+  }, [currentUser, autoClaimStatus, handleUserUpdate]);
   
   // Effect to check for an active session in localStorage on initial load.
   useEffect(() => {
@@ -262,11 +275,6 @@ const App: React.FC = () => {
     setupChatSession();
   }, [activeApiKey]);
   
-  const handleUserUpdate = useCallback((updatedUser: User) => {
-    setCurrentUser(updatedUser);
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-  }, []);
-
   const handleLoginSuccess = async (user: User) => {
     handleUserUpdate(user);
     setJustLoggedIn(true);

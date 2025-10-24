@@ -600,56 +600,66 @@ export const incrementStoryboardUsage = async (userId: string): Promise<{ succes
     }
 };
 
-export const incrementImageUsage = async (userId: string): Promise<void> => {
-    // This is a fire-and-forget function. Errors are logged but not thrown.
-    if (userId.startsWith('trial-')) return; // Do not track for trial users in this table.
-
+export const incrementImageUsage = async (userId: string): Promise<{ success: true; user: User } | { success: false; message: string }> => {
+    if (userId.startsWith('trial-')) {
+        const trialUserId = parseInt(userId.replace('trial-', ''), 10);
+        if (isNaN(trialUserId)) return { success: false, message: "Invalid trial user ID." };
+        
+        const { data, error } = await supabase.from('trial_user').select('*').eq('id', trialUserId).single();
+        if (error || !data) return { success: false, message: "Trial user not found." };
+        return { success: true, user: mapTrialProfileToUser(data as TrialUserProfileData) };
+    }
     try {
         const { data: currentData, error: fetchError } = await supabase
             .from('users')
             .select('total_image')
             .eq('id', userId)
             .single();
-
         if (fetchError) throw fetchError;
-        
-        const currentCount = currentData?.total_image || 0;
-
-        const { error: updateError } = await supabase
+        const currentCount = Number(currentData?.total_image || 0);
+        const { data: updatedData, error: updateError } = await supabase
             .from('users')
             .update({ total_image: currentCount + 1 })
-            .eq('id', userId);
-
+            .eq('id', userId)
+            .select()
+            .single();
         if (updateError) throw updateError;
-
+        return { success: true, user: mapProfileToUser(updatedData as UserProfileData) };
     } catch (error) {
-        console.error("Failed to increment image usage:", getErrorMessage(error));
+        const message = getErrorMessage(error);
+        console.error("Failed to increment image usage:", message);
+        return { success: false, message };
     }
 };
 
-export const incrementVideoUsage = async (userId: string): Promise<void> => {
-    // This is a fire-and-forget function. Errors are logged but not thrown.
-    if (userId.startsWith('trial-')) return; // Do not track for trial users in this table.
-    
+export const incrementVideoUsage = async (userId: string): Promise<{ success: true; user: User } | { success: false; message: string }> => {
+    if (userId.startsWith('trial-')) {
+        const trialUserId = parseInt(userId.replace('trial-', ''), 10);
+        if (isNaN(trialUserId)) return { success: false, message: "Invalid trial user ID." };
+        
+        const { data, error } = await supabase.from('trial_user').select('*').eq('id', trialUserId).single();
+        if (error || !data) return { success: false, message: "Trial user not found." };
+        return { success: true, user: mapTrialProfileToUser(data as TrialUserProfileData) };
+    }
     try {
         const { data: currentData, error: fetchError } = await supabase
             .from('users')
             .select('total_video')
             .eq('id', userId)
             .single();
-
         if (fetchError) throw fetchError;
-        
-        const currentCount = currentData?.total_video || 0;
-
-        const { error: updateError } = await supabase
+        const currentCount = Number(currentData?.total_video || 0);
+        const { data: updatedData, error: updateError } = await supabase
             .from('users')
             .update({ total_video: currentCount + 1 })
-            .eq('id', userId);
-
+            .eq('id', userId)
+            .select()
+            .single();
         if (updateError) throw updateError;
-
+        return { success: true, user: mapProfileToUser(updatedData as UserProfileData) };
     } catch (error) {
-        console.error("Failed to increment video usage:", getErrorMessage(error));
+        const message = getErrorMessage(error);
+        console.error("Failed to increment video usage:", message);
+        return { success: false, message };
     }
 };

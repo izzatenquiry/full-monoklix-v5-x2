@@ -61,57 +61,73 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
         let listType: 'ul' | 'ol' | null = null;
         // FIX: Replaced JSX.Element with React.ReactElement to resolve namespace error.
         let listItems: React.ReactElement[] = [];
+        let listStartNumber: number | undefined;
+        let lastLineWasBlank = false;
 
         const flushList = () => {
           if (listItems.length > 0) {
             if (listType === 'ul') {
               elements.push(<ul key={`ul-${elements.length}`}>{listItems}</ul>);
             } else if (listType === 'ol') {
-              elements.push(<ol key={`ol-${elements.length}`}>{listItems}</ol>);
+              elements.push(<ol key={`ol-${elements.length}`} start={listStartNumber}>{listItems}</ol>);
             }
             listItems = [];
             listType = null;
+            listStartNumber = undefined;
           }
         };
 
         lines.forEach((line, lineIndex) => {
-          if (line.startsWith('# ')) {
-            flushList();
-            elements.push(<h1 key={`${index}-${lineIndex}`}>{renderLine(line.substring(2))}</h1>);
-          } else if (line.startsWith('## ')) {
-            flushList();
-            elements.push(<h2 key={`${index}-${lineIndex}`}>{renderLine(line.substring(3))}</h2>);
-          } else if (line.startsWith('### ')) {
-            flushList();
-            elements.push(<h3 key={`${index}-${lineIndex}`}>{renderLine(line.substring(4))}</h3>);
-          } else if (line.startsWith('* ') || line.startsWith('- ')) {
-            if (listType !== 'ul') {
-              flushList();
-              listType = 'ul';
-            }
-            listItems.push(<li key={`${index}-${lineIndex}`}>{renderLine(line.substring(2))}</li>);
-          } else if (line.match(/^\d+\.\s/)) {
-            if (listType !== 'ol') {
-              flushList();
-              listType = 'ol';
-            }
-            listItems.push(<li key={`${index}-${lineIndex}`}>{renderLine(line.replace(/^\d+\.\s/, ''))}</li>);
-          } else if (line.trim() === '') {
-             // We don't flush the list here to allow for multi-line list items.
-             // Instead, we just add the line break to the last list item if it exists.
+          if (line.trim() === '') {
             if (listItems.length > 0) {
-                // FIX: Cast `lastItem` to a generic ReactElement to fix type inference issues
-                // where `props` was being treated as `unknown`, causing errors.
                 const lastItem = listItems[listItems.length - 1] as React.ReactElement<any>;
                 const newContent = <>{lastItem.props.children}<br/></>;
                 listItems[listItems.length-1] = React.cloneElement(lastItem, {children: newContent});
             } else {
                  elements.push(<br key={`${index}-${lineIndex}-br`} />);
             }
-          } else {
-            flushList();
-            elements.push(<p key={`${index}-${lineIndex}`}>{renderLine(line)}</p>);
+            lastLineWasBlank = true;
+            return;
           }
+
+          const isHeading = line.startsWith('#');
+          const isUnorderedListItem = line.startsWith('* ') || line.startsWith('- ');
+          const orderedListMatch = line.match(/^(\d+)\.\s/);
+
+          if (isHeading) {
+            flushList();
+            if (line.startsWith('# ')) elements.push(<h1 key={`${index}-${lineIndex}`}>{renderLine(line.substring(2))}</h1>);
+            else if (line.startsWith('## ')) elements.push(<h2 key={`${index}-${lineIndex}`}>{renderLine(line.substring(3))}</h2>);
+            else if (line.startsWith('### ')) elements.push(<h3 key={`${index}-${lineIndex}`}>{renderLine(line.substring(4))}</h3>);
+          } else if (isUnorderedListItem) {
+            if (listType !== 'ul') {
+              flushList();
+              listType = 'ul';
+            }
+            listItems.push(<li key={`${index}-${lineIndex}`}>{renderLine(line.substring(2))}</li>);
+          } else if (orderedListMatch) {
+            const currentNumber = parseInt(orderedListMatch[1], 10);
+            
+            // Start a new list if we aren't in one, or if the number isn't sequential after a blank line.
+            if (listType !== 'ol' || lastLineWasBlank) {
+              flushList();
+              listType = 'ol';
+              listStartNumber = currentNumber;
+            }
+            listItems.push(<li key={`${index}-${lineIndex}`}>{renderLine(line.replace(/^\d+\.\s/, ''))}</li>);
+          } else {
+            // This is some other text. If we were in a list and the previous line wasn't blank, it's a continuation.
+            if (listType && !lastLineWasBlank) {
+              const lastItem = listItems[listItems.length - 1] as React.ReactElement<any>;
+              const newContent = <>{lastItem.props.children}<br />{renderLine(line.trim())}</>;
+              listItems[listItems.length - 1] = React.cloneElement(lastItem, { children: newContent });
+            } else {
+              // Otherwise, it's a new paragraph, which breaks any list.
+              flushList();
+              elements.push(<p key={`${index}-${lineIndex}`}>{renderLine(line)}</p>);
+            }
+          }
+          lastLineWasBlank = false;
         });
         
         flushList();

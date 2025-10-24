@@ -9,6 +9,7 @@ import { decodeBase64, createWavBlob } from '../utils/audioUtils';
 import { incrementImageUsage, incrementVideoUsage } from './userService';
 // FIX: Import addHistoryItem from historyService to resolve the 'Cannot find name' error.
 import { addHistoryItem } from "./historyService";
+import eventBus from "./eventBus";
 
 
 const getActiveApiKey = (): string | null => {
@@ -149,7 +150,10 @@ export const generateImages = async (
 
         const userId = getCurrentUserId();
         if (userId) {
-            incrementImageUsage(userId);
+            const updateResult = await incrementImageUsage(userId);
+            if (updateResult.success && updateResult.user) {
+                eventBus.dispatch('userUsageUpdated', updateResult.user);
+            }
         }
 
         const images = response.generatedImages.map(img => img.image.imageBytes);
@@ -292,13 +296,16 @@ export const generateVideo = async (
             })
             .then(blob => new File([blob], `monoklix-veo3-${Date.now()}.mp4`, { type: 'video/mp4' }));
 
-        videoBlobPromise.then(file => {
+        videoBlobPromise.then(async (file) => {
             addLogEntry({ model, prompt: prompt, output: '1 video generated successfully (streamed).', tokenCount: 0, status: 'Success', mediaOutput: file });
             triggerUserWebhook({ type: 'video', prompt: prompt, result: file });
             addHistoryItem({ type: 'Video', prompt: `Video: ${prompt}`, result: file });
             const userId = getCurrentUserId();
             if (userId) {
-                incrementVideoUsage(userId);
+                const updateResult = await incrementVideoUsage(userId);
+                if (updateResult.success && updateResult.user) {
+                    eventBus.dispatch('userUsageUpdated', updateResult.user);
+                }
             }
         }).catch(err => {
             console.error("Error saving streamed video to history:", err);
@@ -414,7 +421,10 @@ export const composeImage = async (prompt: string, images: MultimodalContent[]):
             triggerUserWebhook({ type: 'image', prompt: webhookPrompt, result: result.imageBase64, mimeType: 'image/png' });
             const userId = getCurrentUserId();
             if (userId) {
-                incrementImageUsage(userId);
+                const updateResult = await incrementImageUsage(userId);
+                if (updateResult.success && updateResult.user) {
+                    eventBus.dispatch('userUsageUpdated', updateResult.user);
+                }
             }
         }
         if (result.text) {
