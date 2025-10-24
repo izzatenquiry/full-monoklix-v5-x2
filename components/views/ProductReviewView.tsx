@@ -827,10 +827,9 @@ const ProductReviewView: React.FC<ProductReviewViewProps> = ({ onReEdit, onCreat
             {isGeneratingImages ? <Spinner/> : 'Create All 4 Images'}
         </button>
         {isGeneratingImages && <p className="text-center text-sm text-neutral-500 -mt-4 mb-4">This may take a minute...</p>}
-        <h3 className="text-lg font-semibold mb-4">Generated Images</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="bg-neutral-100 dark:bg-neutral-800/50 p-3 rounded-lg flex flex-col gap-3">
+                <div key={`image-scene-${i}`} className="bg-neutral-100 dark:bg-neutral-800/50 p-3 rounded-lg flex flex-col gap-3">
                     <p className="font-bold text-sm">Scene {i+1}</p>
                     <button onClick={() => {
                             if (generatedImages[i] && typeof generatedImages[i] === 'string') {
@@ -881,8 +880,8 @@ const ProductReviewView: React.FC<ProductReviewViewProps> = ({ onReEdit, onCreat
       
        {/* Step 3: Video Generation */}
       <div className={`bg-white dark:bg-neutral-900 p-6 rounded-lg shadow-sm transition-opacity duration-500 ${step3Disabled ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-        <h2 className="text-xl font-bold mb-1">Step 3: Animate Scenes into Video</h2>
-        <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">Animate your generated scene images into individual video clips, complete with optional voiceover.</p>
+        <h2 className="text-xl font-bold mb-1">Step 3: Generate Scene Videos</h2>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">Animate your generated scene images into video clips.</p>
         
         <div className="mb-6 p-4 border border-neutral-200 dark:border-neutral-700 rounded-lg">
             <h3 className="text-lg font-semibold mb-2">Video Generation Settings</h3>
@@ -910,13 +909,12 @@ const ProductReviewView: React.FC<ProductReviewViewProps> = ({ onReEdit, onCreat
         </div>
          <p className="text-center text-xs text-neutral-500 -mt-4 mb-4">This process can take several minutes. You can also generate videos one by one.</p>
 
-        <h3 className="text-lg font-semibold mb-4">Generated Videos</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {Array.from({ length: 4 }).map((_, i) => (
-                 <div key={i} className="bg-neutral-100 dark:bg-neutral-800/50 p-3 rounded-lg flex flex-col gap-3">
+                 <div key={`video-scene-${i}`} className="bg-neutral-100 dark:bg-neutral-800/50 p-3 rounded-lg flex flex-col gap-3">
                     <p className="font-bold text-sm">Scene {i+1}</p>
-                    <div className="aspect-video bg-neutral-200 dark:bg-neutral-700/50 rounded-md flex items-center justify-center relative group">
-                        {step3Disabled ? (
+                    <div className="bg-neutral-200 dark:bg-neutral-700/50 rounded-md flex items-center justify-center relative group" style={{ aspectRatio: videoAspectRatio.replace(':', ' / ') }}>
+                        {step3Disabled || !generatedImages[i] ? (
                             <div className="flex flex-col items-center justify-center text-center text-xs text-neutral-500 p-2">
                                 <VideoIcon className="w-8 h-8 mb-2"/>
                                 <p>Waiting for image</p>
@@ -927,14 +925,16 @@ const ProductReviewView: React.FC<ProductReviewViewProps> = ({ onReEdit, onCreat
                             <video
                                 key={generatedVideos[i]}
                                 src={generatedVideos[i]!} 
-                                poster={generatedThumbnails[i] || undefined} 
+                                poster={generatedThumbnails[i] || `data:image/png;base64,${generatedImages[i]}`} 
                                 controls 
                                 autoPlay
                                 playsInline
                                 muted
                                 className="w-full h-full object-cover rounded-md"
                             />
-                        ) : null}
+                        ) : (
+                            <img src={`data:image/png;base64,${generatedImages[i]}`} alt={`Scene ${i+1} preview`} className="w-full h-full object-cover rounded-md"/>
+                        )}
                     </div>
                     <button onClick={() => handleGenerateVideo(i)} disabled={!generatedImages[i] || videoGenerationStatus[i] === 'loading' || isGeneratingVideos} className="w-full text-sm bg-white dark:bg-neutral-700 font-semibold py-2 px-3 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                        {videoGenerationStatus[i] === 'loading' ? <Spinner/> : <><VideoIcon className="w-4 h-4"/> Create Video</>}
